@@ -269,6 +269,12 @@ struct monostate {};
 
 namespace internal {
 
+template <bool B = false> constexpr int count() { return B; }
+
+template <bool B1, bool B2, bool... Tail> constexpr int count() {
+  return (B1 ? 1 : 0) + count<B2, Tail...>();
+}
+
 // A helper function to suppress bogus "conditional expression is constant"
 // warnings.
 template <typename T> FMT_CONSTEXPR T const_check(T value) { return value; }
@@ -759,6 +765,12 @@ using has_fallback_formatter =
 
 template <typename Char> struct named_arg_base;
 template <typename T, typename Char> struct named_arg;
+struct named_arg_info {};
+
+template <typename T> struct is_named_arg : std::false_type {};
+
+template <typename T, typename Char>
+struct is_named_arg<named_arg<T, Char>> : std::true_type {};
 
 enum class type {
   none_type,
@@ -1338,6 +1350,8 @@ class format_arg_store
 
   // If the arguments are not packed, add one more element to mark the end.
   value_type data_[num_args + (num_args == 0 ? 1 : 0)];
+  internal::named_arg_info
+      named_args_[internal::count<internal::is_named_arg<Args>::value...>()];
 
   friend class basic_format_args<Context>;
 
